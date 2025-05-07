@@ -49,4 +49,8 @@ wheels/
 # .dockerignore
 
 # uv cache
-.uv_cache/ 
+.uv_cache/
+
+# Additional changes from the code block
+.env
+*.lock 
