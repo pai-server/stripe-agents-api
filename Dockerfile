@@ -4,7 +4,8 @@ FROM python:3.12-slim
 # Set environment variables for Python
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PIP_NO_CACHE_DIR=off # Aunque usamos uv, no hace daño
+# Aunque usamos uv, no hace daño
+ENV PIP_NO_CACHE_DIR=off
 
 # Install system dependencies including Node.js (for npx) and curl (for uv install)
 RUN apt-get update && \
