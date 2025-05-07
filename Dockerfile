@@ -1,54 +1,57 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12-slim
+# ────────────────────────────────
+# 1. Etapa de build de dependencias
+# ────────────────────────────────
+FROM python:3.12-slim AS builder
 
-# Set environment variables for Python
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-# Aunque usamos uv, no hace daño
-ENV PIP_NO_CACHE_DIR=off
-
-# Install system dependencies including Node.js (for npx) and curl (for uv install)
+# Instalamos compiladores mínimos por si alguna wheel necesita "build"
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl gnupg ca-certificates nodejs && \
-    # Clean up apt cache
+    apt-get install -y --no-install-recommends build-essential curl gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-# Install uv (Python package installer/resolver)
-# Esto lo instala en /root/.local/bin/uv, luego lo movemos a /usr/local/bin
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    mv /root/.local/bin/uv /usr/local/bin/uv && \
-    # Limpiamos curl y gnupg DESPUÉS de usarlos para instalar uv
-    apt-get purge -y --auto-remove curl gnupg && apt-get autoremove -y
-
-# Define path for the virtual environment
-ENV VENV_PATH=/opt/venv
-
-# Create the virtual environment
-RUN python3 -m venv $VENV_PATH
-
-# Set the working directory in the container
+# Copiamos los archivos de dependencias primero (capas de cache)
 WORKDIR /app
+COPY pyproject.toml uv.lock* ./
 
-# Copy dependency definition files
-COPY pyproject.toml uv.lock ./
+# Creamos un venv aislado que luego pasaremos a la imagen final
+ENV VENV_PATH=/venv
+RUN python -m venv $VENV_PATH
 
-# Install Python dependencies into the virtual environment using uv
-# Usamos el uv global para instalar en el venv especificado por --python
-RUN echo "Attempting to install Python dependencies with uv sync..." && \
-    set -ex && \
-    /usr/local/bin/uv sync --frozen --python $VENV_PATH/bin/python && \
-    echo "Finished uv sync. Listing site-packages content:" && \
-    ls -la $VENV_PATH/lib/python*/site-packages/ && \
-    echo "Site-packages listing complete."
+# Instalamos uv y sincronizamos dependencias dentro del venv
+RUN pip install --upgrade pip && \
+    pip install uv && \
+    uv sync --frozen --python $VENV_PATH/bin/python
 
-# Copy the rest of the application code
-COPY main.py ./
-# Si tienes otros módulos locales, cópialos también:
-# COPY ./agents_module ./agents_module/
+# ────────────────────────────────
+# 2. Imagen final de runtime
+# ────────────────────────────────
+FROM python:3.12-slim
 
-# Expose the port the app runs on
+# — Añadimos Node.js + npm para que funcione npx (@modelcontextprotocol usa npx)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends nodejs npm && \
+    npm install -g npm@latest && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copiamos el venv ya poblado desde la etapa builder
+ENV VENV_PATH=/venv
+COPY --from=builder $VENV_PATH $VENV_PATH
+
+# Aseguramos que el venv sea el intérprete por defecto
+ENV PATH="$VENV_PATH/bin:$PATH"
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=off
+
+# Carpeta de la app y resto del código
+WORKDIR /app
+COPY . .
+
+# Exponemos puerto (FastAPI)
 EXPOSE 8000
 
-# Define the command to run the application using python from the venv
-# Asegúrate de que STRIPE_SECRET_KEY y GOOGLE_MAPS_API_KEY estén configuradas en Railway.
-CMD ["/opt/venv/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Variables de entorno que tu app espera DEBE ponerlas Railway o tu .env, ej.:
+# ENV STRIPE_SECRET_KEY=sk_live_xxx
+# ENV GOOGLE_MAPS_API_KEY=AIza...
+
+# Comando de arranque
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
