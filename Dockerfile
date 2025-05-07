@@ -1,58 +1,35 @@
-# ────────────────────────────────
-# 1. Etapa de build de dependencias
-# ────────────────────────────────
-FROM python:3.12-slim AS builder
+# -------- 1️⃣  Imagen base con Python 3.12 ----------
+    FROM python:3.12-slim
 
-# Instalamos compiladores mínimos por si alguna wheel necesita "build"
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends build-essential curl gnupg && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copiamos los archivos de dependencias primero (capas de cache)
-WORKDIR /app
-COPY pyproject.toml uv.lock* ./
-RUN ls -la /app # Para depurar si uv.lock está presente
-
-# Creamos un venv aislado que luego pasaremos a la imagen final
-ENV VENV_PATH=/venv
-RUN python -m venv $VENV_PATH
-
-# Instalamos uv y sincronizamos dependencias dentro del venv
-RUN pip install --upgrade pip && \
-    pip install uv && \
-    uv sync --frozen --python $VENV_PATH/bin/python # Restaurado --frozen
-
-# ────────────────────────────────
-# 2. Imagen final de runtime
-# ────────────────────────────────
-FROM python:3.12-slim
-
-# — Añadimos Node.js + npm para que funcione npx (@modelcontextprotocol usa npx)
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends nodejs npm && \
-    # npm install -g npm@latest && # TEMPORALMENTE COMENTADO POR POSIBLE OOM
-    rm -rf /var/lib/apt/lists/*
-
-# Copiamos el venv ya poblado desde la etapa builder
-ENV VENV_PATH=/venv
-COPY --from=builder $VENV_PATH $VENV_PATH
-
-# Aseguramos que el venv sea el intérprete por defecto
-ENV PATH="$VENV_PATH/bin:$PATH"
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=off
-
-# Carpeta de la app y resto del código
-WORKDIR /app
-COPY . .
-
-# Exponemos puerto (FastAPI)
-EXPOSE 8000
-
-# Variables de entorno que tu app espera DEBE ponerlas Railway o tu .env, ej.:
-# ENV STRIPE_SECRET_KEY=sk_live_xxx
-# ENV GOOGLE_MAPS_API_KEY=AIza...
-
-# Comando de arranque
-CMD ["/opt/venv/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+    # -------- 2️⃣  Ajustes de entorno ----------
+    ENV PYTHONDONTWRITEBYTECODE=1 \
+        PYTHONUNBUFFERED=1 \
+        # Railway siempre publica el puerto en $PORT
+        PORT=8000
+    
+    # -------- 3️⃣  Dependencias del sistema ----------
+    #  - build-essential → compilar libs de Python (cryptography, psycopg2, etc.)
+    #  - curl + gnupg    → agregar repo de NodeSource
+    RUN apt-get update && \
+        apt-get install -y --no-install-recommends build-essential curl gnupg && \
+        curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+        apt-get install -y --no-install-recommends nodejs && \
+        apt-get clean && rm -rf /var/lib/apt/lists/*
+    
+    # -------- 4️⃣  Instalar dependencias Python ----------
+    WORKDIR /app
+    COPY requirements*.txt pyproject.toml* poetry.lock* ./
+    RUN pip install --upgrade pip && \
+        if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt ; fi && \
+        if [ -f pyproject.toml ];   then pip install --no-cache-dir . ; fi
+    
+    # -------- 5️⃣  Copiar el código ----------
+    COPY . .
+    
+    # -------- 6️⃣  Exponer el puerto ----------
+    EXPOSE ${PORT}
+    
+    # -------- 7️⃣  Comando de arranque ----------
+    # Usa PORT si Railway lo define (ej. 39787) o 8000 por defecto
+    CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+    
