@@ -1,0 +1,52 @@
+# Python specific
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment folders
+env/
+venv/
+.venv/
+
+# IDE and project specific
+.idea/
+.vscode/
+.project
+.settings/
+*.swp
+*.swo
+
+# Cache files
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.cache/
+
+# Log files
+*.log
+
+# Distribution / packaging
+.eggs/
+*.egg-info/
+dist/
+build/
+wheels/
+*.egg
+
+# Secrets
+.env
+*.env
+
+# Git specific
+.git/
+.gitignore
+
+# Docker specific (if Dockerfile is in context)
+# Dockerfile
+# .dockerignore
+
+# uv cache
+.uv_cache/ 
