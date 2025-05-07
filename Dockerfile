@@ -50,4 +50,4 @@ EXPOSE 8000
 
 # Define the command to run the application.
 # Ensure STRIPE_SECRET_KEY and GOOGLE_MAPS_API_KEY are set as environment variables when running the container.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["sh", "-c", "echo '==== DEBUGGING START ====' && echo 'My PATH is: ' $PATH && echo 'Contents of /root/.local/bin:' && ls -la /root/.local/bin && echo 'Which uvicorn:' && which uvicorn && echo '==== DEBUGGING END ====' && echo 'Attempting to start uvicorn...' && uvicorn main:app --host 0.0.0.0 --port 8000"] 
