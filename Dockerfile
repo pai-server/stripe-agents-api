@@ -38,7 +38,7 @@ COPY pyproject.toml uv.lock ./
 
 # Install Python dependencies using uv
 # Ensure uv.lock is up-to-date with pyproject.toml by running `uv lock` locally first.
-RUN uv sync --frozen
+RUN echo "Forcing re-run of uv sync" && uv sync --frozen
 
 # Copy the rest of the application code
 COPY main.py ./
@@ -50,4 +50,4 @@ EXPOSE 8000
 
 # Define the command to run the application.
 # Ensure STRIPE_SECRET_KEY and GOOGLE_MAPS_API_KEY are set as environment variables when running the container.
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["sh", "-c", "echo '==== PY DEBUG START ====' && echo 'Python version:' && python --version && echo 'Python path:' && which python && echo 'Site packages for system Python (approximated):' && ls -la $(python -c \"import sysconfig; print(sysconfig.get_paths()[\'purelib\'])\") && echo '==== PY DEBUG END ====' && python -m uvicorn main:app --host 0.0.0.0 --port 8000"] 
