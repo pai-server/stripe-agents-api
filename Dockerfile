@@ -20,7 +20,7 @@ RUN python -m venv $VENV_PATH
 # Instalamos uv y sincronizamos dependencias dentro del venv
 RUN pip install --upgrade pip && \
     pip install uv && \
-    uv sync --python $VENV_PATH/bin/python # --frozen TEMPORALMENTE COMENTADO PARA DEBUG
+    uv sync --frozen --python $VENV_PATH/bin/python # Restaurado --frozen
 
 # ────────────────────────────────
 # 2. Imagen final de runtime
@@ -54,5 +54,5 @@ EXPOSE 8000
 # ENV STRIPE_SECRET_KEY=sk_live_xxx
 # ENV GOOGLE_MAPS_API_KEY=AIza...
 
-# Comando de arranque MODIFICADO PARA DEBUG
-CMD ["sh", "-c", "echo '==== FINAL STAGE DEBUG ====' && echo 'PATH is: ' $PATH && echo 'Contents of $VENV_PATH/bin:' && ls -la $VENV_PATH/bin && echo 'Which uvicorn:' && which uvicorn && echo 'Attempting to start uvicorn...' && uvicorn main:app --host 0.0.0.0 --port 8000"] 
+# Comando de arranque
+CMD ["/opt/venv/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
