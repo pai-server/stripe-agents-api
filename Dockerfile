@@ -50,4 +50,4 @@ EXPOSE 8000
 
 # Define the command to run the application.
 # Ensure STRIPE_SECRET_KEY and GOOGLE_MAPS_API_KEY are set as environment variables when running the container.
-CMD ["sh", "-c", "echo '==== PY DEBUG START ====' && echo 'Python version:' && python --version && echo 'Python path:' && which python && echo 'Site packages for system Python (approximated):' && ls -la $(python -c \"import sysconfig; print(sysconfig.get_paths()[\'purelib\'])\") && echo '==== PY DEBUG END ====' && python -m uvicorn main:app --host 0.0.0.0 --port 8000"] 
+CMD ["sh", "-c", "echo '==== PY DEBUG START ====' && echo 'Python version:' && python --version && echo 'Python path:' && which python && SITE_PACKAGES_PATH=$(python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])') && echo \"Site packages path is: $SITE_PACKAGES_PATH\" && echo 'Site packages contents:' && ls -la \"$SITE_PACKAGES_PATH\" && echo '==== PY DEBUG END ====' && python -m uvicorn main:app --host 0.0.0.0 --port 8000"] 
