@@ -54,5 +54,5 @@ EXPOSE 8000
 # ENV STRIPE_SECRET_KEY=sk_live_xxx
 # ENV GOOGLE_MAPS_API_KEY=AIza...
 
-# Comando de arranque
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Comando de arranque MODIFICADO PARA DEBUG
+CMD ["sh", "-c", "echo '==== FINAL STAGE DEBUG ====' && echo 'PATH is: ' $PATH && echo 'Contents of $VENV_PATH/bin:' && ls -la $VENV_PATH/bin && echo 'Which uvicorn:' && which uvicorn && echo 'Attempting to start uvicorn...' && uvicorn main:app --host 0.0.0.0 --port 8000"] 
