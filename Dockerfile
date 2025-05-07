@@ -34,9 +34,12 @@ COPY pyproject.toml uv.lock ./
 
 # Install Python dependencies into the virtual environment using uv
 # Usamos el uv global para instalar en el venv especificado por --python
-RUN echo "Installing dependencies into venv: $VENV_PATH" && \
+RUN echo "Attempting to install Python dependencies with uv sync..." && \
+    set -ex && \
     /usr/local/bin/uv sync --frozen --python $VENV_PATH/bin/python && \
-    echo "Finished installing dependencies."
+    echo "Finished uv sync. Listing site-packages content:" && \
+    ls -la $VENV_PATH/lib/python*/site-packages/ && \
+    echo "Site-packages listing complete."
 
 # Copy the rest of the application code
 COPY main.py ./
