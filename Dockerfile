@@ -11,6 +11,7 @@ RUN apt-get update && \
 # Copiamos los archivos de dependencias primero (capas de cache)
 WORKDIR /app
 COPY pyproject.toml uv.lock* ./
+RUN ls -la /app # Para depurar si uv.lock está presente
 
 # Creamos un venv aislado que luego pasaremos a la imagen final
 ENV VENV_PATH=/venv
@@ -19,7 +20,7 @@ RUN python -m venv $VENV_PATH
 # Instalamos uv y sincronizamos dependencias dentro del venv
 RUN pip install --upgrade pip && \
     pip install uv && \
-    uv sync --frozen --python $VENV_PATH/bin/python
+    uv sync --python $VENV_PATH/bin/python # --frozen TEMPORALMENTE COMENTADO PARA DEBUG
 
 # ────────────────────────────────
 # 2. Imagen final de runtime
@@ -29,7 +30,7 @@ FROM python:3.12-slim
 # — Añadimos Node.js + npm para que funcione npx (@modelcontextprotocol usa npx)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends nodejs npm && \
-    npm install -g npm@latest && \
+    # npm install -g npm@latest && # TEMPORALMENTE COMENTADO POR POSIBLE OOM
     rm -rf /var/lib/apt/lists/*
 
 # Copiamos el venv ya poblado desde la etapa builder
